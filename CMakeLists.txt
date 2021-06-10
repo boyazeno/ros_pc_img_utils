@@ -19,8 +19,21 @@ find_package(catkin REQUIRED COMPONENTS
 )
 
 ## System dependencies are found with CMake's conventions
-# find_package(Boost REQUIRED COMPONENTS system)
+find_package(realsense2)
+if(NOT realsense2_FOUND)
+    message(FATAL_ERROR "\n\n Intel RealSense SDK 2.0 is missing, please install it from https://github.com/IntelRealSense/librealsense/releases\n\n")
+endif()
+message(STATUS "Get realsense2 path ${realsense2_INCLUDE_DIR}")
 
+find_package(OpenCV)
+include_directories(${OpenCV_INCLUDE_DIRS})
+
+find_package(Eigen3)
+include_directories(${EIGEN3_INCLUDE_DIR})
+
+find_package(PCL 1.9 REQUIRED)
+include_directories(${PCL_INCLUDE_DIRS})
+link_directories(${PCL_LIBRARY_DIRS})
 
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
@@ -108,10 +121,10 @@ find_package(catkin REQUIRED COMPONENTS
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-#  INCLUDE_DIRS include
-#  LIBRARIES pointcloud_test
-#  CATKIN_DEPENDS geometry_msgs roscpp rospy sensor_msgs std_msgs
-#  DEPENDS system_lib
+ INCLUDE_DIRS include ${EIGEN3_INCLUDE_DIR} ${realsense2_INCLUDE_DIR}
+ LIBRARIES pcl_img_utils ${realsense2_LIBRARY}
+ CATKIN_DEPENDS geometry_msgs roscpp  rospy sensor_msgs std_msgs pcl_conversions cv_bridge pcl_ros
+ DEPENDS Boost OpenCV PCL
 )
 
 ###########
@@ -121,14 +134,15 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
-# include
+  include
   ${catkin_INCLUDE_DIRS}
+  ${realsense2_INCLUDE_DIR}
 )
 
 ## Declare a C++ library
-# add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/pointcloud_test.cpp
-# )
+add_library(pcl_img_utils
+  src/pc2img.cpp
+)
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
@@ -138,7 +152,7 @@ include_directories(
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-# add_executable(${PROJECT_NAME}_node src/pointcloud_test_node.cpp)
+add_executable(realsensor_filter_node node/realsensor_filter_node.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -151,10 +165,16 @@ include_directories(
 # add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
-# target_link_libraries(${PROJECT_NAME}_node
-#   ${catkin_LIBRARIES}
-# )
+target_link_libraries(pcl_img_utils
+  ${catkin_LIBRARIES}
+  ${realsense2_LIBRARY}
+)
 
+target_link_libraries(realsensor_filter_node
+  ${catkin_LIBRARIES}
+  ${realsense2_LIBRARY}
+  pcl_img_utils
+)
 #############
 ## Install ##
 #############
