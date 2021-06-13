@@ -23,7 +23,7 @@
 class IOProcesser
 {
     public:
-    IOProcesser(){}
+    IOProcesser(std::string pc_frame="pointclout_processed",std::string img_frame="image_processed" ):PC_FRAME(pc_frame), IMG_FRAME(img_frame){}
 
     bool setNodeHandle()
     {
@@ -78,11 +78,35 @@ class IOProcesser
         return this->publishImg(cv_img.toImageMsg());
     }
 
-    bool publishPC(const sensor_msgs::PointCloud2ConstPtr& pc);
+    bool publishPC(const sensor_msgs::PointCloud2& pc)
+    {
+        this->pub_pc_.publish(pc);
+        return true;
+    }
 
-    bool publishPC(const pcl::PointCloud<pcl::PointXYZ>::ConstPtr& pc);
+    bool publishPC(const pcl::PointCloud<pcl::PointXYZ>::ConstPtr& pc)
+    {
+        sensor_msgs::PointCloud2 pc_msg;
+        pcl::toROSMsg(*pc, pc_msg);
+        pc_msg.header.frame_id = PC_FRAME;
+        return this->publishPC(pc_msg);
+    }
 
-    bool publishPC(const Eigen::MatrixX3d& pc);
+    bool publishPC(const Eigen::MatrixX3d& pc, const int& width=-1, const int& height=-1)
+    {
+        pcl::PointCloud<pcl::PointXYZ>::Ptr pc_pcl(new pcl::PointCloud<pcl::PointXYZ>);
+        pc_pcl->getMatrixXfMap() = pc.cast<float>();
+        if(width>0)
+        {
+            pc_pcl->width = width;
+        }
+        else
+        {
+            pc_pcl->width = pc.rows();
+        }
+        pc_pcl->height = height;
+        return this->publishPC(pc_pcl);   
+    }
 
     private:
     ros::NodeHandlePtr nh_;
@@ -93,6 +117,9 @@ class IOProcesser
 
     sensor_msgs::ImagePtr img_msg_;
     sensor_msgs::PointCloud2Ptr pc_msg_;
+
+    const std::string PC_FRAME;
+    const std::string IMG_FRAME;
 
     void callbackImg(sensor_msgs::ImageConstPtr& img_msg)
     {
@@ -141,7 +168,7 @@ class IOProcesser
     static bool loadPcdAsPointCloud2Msg(const std::string& c, sensor_msgs::PointCloud2Ptr& pc_out)
     {
         pcl::PointCloud<pcl::PointXYZ>::Ptr pc_pcl_xyz;
-        loadPcdAsPointCloudPCL<T>(path, *pc_pcl_xyz);
+        loadPcdAsPointCloudPCL<T>(c, *pc_pcl_xyz);
         pcl::toROSMsg(*pc_pcl_xyz, pc_out);
         return true;
     }
