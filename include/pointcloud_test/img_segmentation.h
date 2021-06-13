@@ -19,9 +19,12 @@
 class ImgSegmentor
 {
     public:
-    ImgSegmentor(){}
+    ImgSegmentor()
+    {
+        this->setParam();
+    }
 
-    bool filter();
+    bool filter(const sensor_msgs::ImagePtr& img_ptr);
 
     bool setParam();
 

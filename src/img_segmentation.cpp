@@ -1,8 +1,16 @@
 #include "pointcloud_test/img_segmentation.h"
 
-bool ImgSegmentor::filter()
+bool ImgSegmentor::filter(const sensor_msgs::ImagePtr& img_ptr)
 {
-
+    cv::Mat img_masked;
+    //TODO 
+    // 1. add color filter
+    // 2. add light adjustment
+    // 3. compare pixelwise similarity, generate masks
+    // 4. do open+close(erosion, dilation, erosion), or pick kontour > min_threshold
+    // 5. mask can be used as weight for graps choosing
+    this->io_processer_.publishImg(img_masked);
+    return true;
 }
 
 bool ImgSegmentor::setImgOriginal()
@@ -13,6 +21,11 @@ bool ImgSegmentor::setImgOriginal()
 bool ImgSegmentor::setImgScene()
 {
 
+}
+
+bool ImgSegmentor::setParam()
+{
+    this->io_processer_.setSubscriberImg(boost::bind(&ImgSegmentor::filter, this, _1));
 }
 
 bool ImgSegmentor::toMatCV(const sensor_msgs::ImagePtr& img_msg,  cv_bridge::CvImagePtr&  img_out)

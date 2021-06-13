@@ -19,6 +19,7 @@
 #include <string>
 #include <vector>
 #include <boost/bind.hpp>
+#include <boost/function.hpp>
 
 class IOProcesser
 {
@@ -49,13 +50,13 @@ class IOProcesser
         return true;
     }
 
-    bool setSubscriberImg(const std::string& topic_name="ioprocesser_img_out")
+    bool setSubscriberImg(const boost::function<bool(sensor_msgs::ImagePtr)>& execute_func, const std::string& topic_name="ioprocesser_img_out")
     {
-        this->sub_img_ = this->nh_->subscribe<sensor_msgs::Image>(topic_name,1,boost::bind(&IOProcesser::callbackImg, this, _1));
+        this->sub_img_ = this->nh_->subscribe<sensor_msgs::Image>(topic_name,1,boost::bind(&IOProcesser::callbackImg, this, _1, &execute_func));
         return true;
     }
 
-     bool setSubscriberImg(const std::string& topic_name="ioprocesser_pointcloud_out")
+     bool setSubscriberPC(const std::string& topic_name="ioprocesser_pointcloud_out")
     {
         this->sub_pc_ = this->nh_->subscribe<sensor_msgs::PointCloud2>(topic_name,1,boost::bind(&IOProcesser::callbackPC, this, _1));
         return true;
@@ -69,11 +70,12 @@ class IOProcesser
 
     bool publishImg(const Eigen::MatrixXd& img);
 
-    bool publishImg(const cv::Mat& img, const std_msgs::Header& header, const std::string& encoding= sensor_msgs::image_encodings::BGR8)
+    bool publishImg(const cv::Mat& img, const std::string& encoding= sensor_msgs::image_encodings::BGR8)
     {
         cv_bridge::CvImage cv_img;
         cv_img.image = img;
-        cv_img.header = header;
+        cv_img.header.frame_id = this->IMG_FRAME;
+        cv_img.header.stamp = ros::Time::now();
         cv_img.encoding = encoding;
         return this->publishImg(cv_img.toImageMsg());
     }
@@ -121,9 +123,13 @@ class IOProcesser
     const std::string PC_FRAME;
     const std::string IMG_FRAME;
 
-    void callbackImg(sensor_msgs::ImageConstPtr& img_msg)
+    void callbackImg(sensor_msgs::ImageConstPtr& img_msg, const boost::function<bool(sensor_msgs::ImagePtr)>& execute_func)
     {
         *img_msg_ = *img_msg;
+        if(!execute_func(img_msg_))
+        {
+            ROS_WARN_STREAM("Cannot execute processing function inside callback function at"<<ros::Time::now());
+        }
         return;
     }
 
