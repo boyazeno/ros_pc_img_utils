@@ -1,7 +1,27 @@
 #include "pointcloud_test/img_segmentation.h"
 
 bool ImgSegmentor::filter(const sensor_msgs::ImagePtr& img_ptr)
-{
+{   
+    // Get background image at first
+    if(this->is_first_frame_)
+    {
+        if(!this->setImgOriginal(img_ptr))
+        {
+            retry_++;
+            if(retry_>retry_max_)
+            {
+                ROS_ERROR("After retry still didn't get any image as background!");
+                return false;
+            }
+            ROS_WARN("Did not get image, retrying...");
+            return true;
+        }
+        ROS_INFO("Got background image!");
+        this->is_first_frame_ = true;
+        return true;
+    }
+
+    // Use background image to find the object region
     cv::Mat img_masked;
     //TODO 
     // 1. add color filter
@@ -13,19 +33,35 @@ bool ImgSegmentor::filter(const sensor_msgs::ImagePtr& img_ptr)
     return true;
 }
 
-bool ImgSegmentor::setImgOriginal()
+bool ImgSegmentor::setImgOriginal(const sensor_msgs::ImagePtr& img)
 {
-
-}
-
-bool ImgSegmentor::setImgScene()
-{
-
+    img_original_ptr_ = cv_bridge::toCvCopy(img, sensor_msgs::image_encodings::RGB8);
+    if(img_original_ptr_->image.empty())
+    {
+        ROS_ERROR("Cannot get initial image as background!");
+        return false;
+    }
+    return true;
 }
 
 bool ImgSegmentor::setParam()
 {
-    this->io_processer_.setSubscriberImg(boost::bind(&ImgSegmentor::filter, this, _1));
+    this->is_first_frame_ = false;
+    this->retry_ = 0;
+    ros::param::param<int>("~retry_background_img", retry_max_, 5); 
+    std::string topic_name_sub;
+    ros::param::param<std::string>("~topic_name_sub", topic_name_sub, "image_camera"); 
+    std::string topic_name_pub;
+    ros::param::param<std::string>("~topic_name_pub", topic_name_pub, "image_out"); 
+    std::string frame_img;
+    ros::param::param<std::string>("~frame_img", frame_img, "camera"); 
+    std::string frame_pc;
+    ros::param::param<std::string>("~frame_pc", frame_pc, "camera"); 
+    this->io_processer_.setNodeHandle();
+    this->io_processer_.setFrameImg(frame_img);
+    this->io_processer_.setFramePC(frame_pc);
+    this->io_processer_.setSubscriberImg(boost::bind(&ImgSegmentor::filter, this, _1), topic_name_sub);
+    this->io_processer_.setPublisherImg(topic_name_pub);
 }
 
 bool ImgSegmentor::toMatCV(const sensor_msgs::ImagePtr& img_msg,  cv_bridge::CvImagePtr&  img_out)

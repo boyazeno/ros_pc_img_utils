@@ -28,7 +28,7 @@ class ImgSegmentor
 
     bool setParam();
 
-    bool setImgOriginal();
+    bool setImgOriginal(const sensor_msgs::ImagePtr& img);
 
     bool setImgScene();
 
@@ -42,7 +42,9 @@ class ImgSegmentor
     cv_bridge::CvImagePtr img_scene_ptr_;
     cv::Mat img_original_mat_;
     IOProcesser io_processer_;
-
+    bool is_first_frame_;
+    int retry_;
+    int retry_max_;
 
     bool toMatCV(const sensor_msgs::ImagePtr& img_msg, cv_bridge::CvImagePtr& img_out);
 

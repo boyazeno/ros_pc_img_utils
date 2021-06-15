@@ -24,7 +24,7 @@
 class IOProcesser
 {
     public:
-    IOProcesser(std::string pc_frame="pointclout_processed",std::string img_frame="image_processed" ):PC_FRAME(pc_frame), IMG_FRAME(img_frame){}
+    IOProcesser(){}
 
     bool setNodeHandle()
     {
@@ -35,6 +35,18 @@ class IOProcesser
     bool setNodeHandle(ros::NodeHandlePtr& nh)
     {
         this->nh_ = nh;
+        return true;
+    }
+
+    bool setFramePC(const std::string& frame_img)
+    {
+        this->frame_img_ = frame_img;
+        return true;
+    }
+
+    bool setFrameImg(const std::string& frame_pc)
+    {
+        this->frame_pc_ = frame_pc;
         return true;
     }
 
@@ -74,7 +86,7 @@ class IOProcesser
     {
         cv_bridge::CvImage cv_img;
         cv_img.image = img;
-        cv_img.header.frame_id = this->IMG_FRAME;
+        cv_img.header.frame_id = this->frame_img_;
         cv_img.header.stamp = ros::Time::now();
         cv_img.encoding = encoding;
         return this->publishImg(cv_img.toImageMsg());
@@ -90,7 +102,7 @@ class IOProcesser
     {
         sensor_msgs::PointCloud2 pc_msg;
         pcl::toROSMsg(*pc, pc_msg);
-        pc_msg.header.frame_id = PC_FRAME;
+        pc_msg.header.frame_id = this->frame_pc_;
         return this->publishPC(pc_msg);
     }
 
@@ -120,8 +132,8 @@ class IOProcesser
     sensor_msgs::ImagePtr img_msg_;
     sensor_msgs::PointCloud2Ptr pc_msg_;
 
-    const std::string PC_FRAME;
-    const std::string IMG_FRAME;
+    std::string frame_pc_;
+    std::string frame_img_;
 
     void callbackImg(sensor_msgs::ImageConstPtr& img_msg, const boost::function<bool(sensor_msgs::ImagePtr)>& execute_func)
     {
