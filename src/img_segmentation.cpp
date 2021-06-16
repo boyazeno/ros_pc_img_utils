@@ -29,6 +29,13 @@ bool ImgSegmentor::filter(const sensor_msgs::ImagePtr& img_ptr)
     // 3. compare pixelwise similarity, generate masks
     // 4. do open+close(erosion, dilation, erosion), or pick kontour > min_threshold
     // 5. mask can be used as weight for graps choosing
+    cv::Mat img_hsv;
+    cv_bridge::CvImageConstPtr img_bridge = cv_bridge::toCvShare(img_ptr, sensor_msgs::image_encodings::RGB8);
+    cv::cvtColor(img_bridge->image, img_hsv, cv::COLOR_BGR2HSV);
+    std::vector<cv::Mat> channels_hsv;
+    cv::split(img_hsv, channels_hsv);
+    img_hsv==img_hsv;
+    
     this->io_processer_.publishImg(img_masked);
     return true;
 }
@@ -87,7 +94,7 @@ bool adjustLight(cv::Mat &img, int blockSize)
 
     // convert to HSV
     cv::Mat img_hsv;
-    cv::cvtColor(img, img_hsv, cv::COLOR_RGB2HSV);
+    cv::cvtColor(img, img_hsv, cv::COLOR_BGR2HSV);
     std::vector<cv::Mat> img_splited;
 
     // Split the image and get the value channel for adjustment
@@ -129,6 +136,28 @@ bool adjustLight(cv::Mat &img, int blockSize)
     cv::merge(img_splited, img_hsv);
 
     // Convert back to RGB
-    cv::cvtColor(img_hsv, img, cv::COLOR_HSV2RGB);
+    cv::cvtColor(img_hsv, img, cv::COLOR_HSV2BGR);
+    return true;
+}
+
+bool _compareImgsWithThreshold(cv::Mat& mask , const cv::Mat& a, const cv::Mat& b, const int& threshold)
+{
+    if((a.cols!=b.cols) || (a.rows!=b.rows))
+    {
+        throw std::range_error("Input images not match!");
+        return false;
+    }
+    cv::Mat mask_m(a.rows,a.cols, CV_8U, 0);
+    mask = mask_m;
+    for(size_t i=0; i<a.rows; ++i)
+    {
+        const uchar* pixrowA = a.ptr<uchar>(i);
+        const uchar* pixrowB = b.ptr<uchar>(i);
+        uchar* pixrowM = mask.ptr<uchar>(i);
+        for(size_t j=0; j<a.cols; ++j)
+        {
+            pixrowM[j] = std::abs(pixrowA[j]-pixrowB[j])<=threshold? 255:0;   
+        }
+    }
     return true;
 }
